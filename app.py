@@ -1,90 +1,65 @@
-# app.py
 import streamlit as st
-import joblib
-import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.datasets import load_iris
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+import joblib
+import os
 
-# --------------------------
-# Load model
-# --------------------------
-model = joblib.load("iris_model.pkl")  # your trained model
+# Load dataset & model
+df = pd.read_csv("https://raw.githubusercontent.com/mwaskom/seaborn-data/master/iris.csv")
+model = joblib.load("iris_model.pkl")
 
-# Load Iris dataset for visualizations
-iris = load_iris()
-df = pd.DataFrame(iris.data, columns=iris.feature_names)
-df['species'] = pd.Categorical.from_codes(iris.target, iris.target_names)
+# App title
+st.title("🌸 Iris Flower Prediction Dashboard")
 
-X = df[iris.feature_names]
-y = df['species']
+st.markdown(
+    """
+    This app predicts the type of **Iris flower** based on measurements.  
+    Adjust the values below and click **Predict**.
+    """
+)
 
-# Train a decision tree for visualization
-dt_model = DecisionTreeClassifier()
-dt_model.fit(X, y)
+# Sidebar for dataset preview
+st.sidebar.header("🔍 Explore Dataset")
+rows = st.sidebar.slider("Select number of rows to view:", 5, len(df), 10)
+st.sidebar.dataframe(df.head(rows))
 
-# --------------------------
-# Streamlit App Layout
-# --------------------------
-st.set_page_config(page_title="Iris Flower Predictor", layout="wide")
-st.title("🌸 Iris Flower Predictor")
-st.write("Predict the species of an Iris flower and explore data analysis visualizations.")
-
-# --------------------------
-# Sidebar input fields
-# --------------------------
-st.sidebar.header("Input Flower Measurements")
-sepal_length = st.sidebar.number_input("Sepal Length (cm)", min_value=0.0, step=0.1, value=float(df['sepal length (cm)'].mean()))
-sepal_width  = st.sidebar.number_input("Sepal Width (cm)", min_value=0.0, step=0.1, value=float(df['sepal width (cm)'].mean()))
-petal_length = st.sidebar.number_input("Petal Length (cm)", min_value=0.0, step=0.1, value=float(df['petal length (cm)'].mean()))
-petal_width  = st.sidebar.number_input("Petal Width (cm)", min_value=0.0, step=0.1, value=float(df['petal width (cm)'].mean()))
-
-# --------------------------
-# Prediction with button
-# --------------------------
-st.subheader("Prediction")
-if st.sidebar.button("Predict"):
-    features = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
-    prediction = model.predict(features)[0]
-    st.success(f"🌸 Predicted species: **{prediction}**")
-
-# --------------------------
-# Dataset display
-# --------------------------
-st.subheader("Dataset Preview")
-st.dataframe(df)
-
-# --------------------------
-# Pairplot
-# --------------------------
-st.subheader("Pairplot of Iris Dataset")
-sns_plot = sns.pairplot(df, hue="species", corner=True)
-st.pyplot(sns_plot)
-
-# --------------------------
-# Histograms in two columns
-# --------------------------
-st.subheader("Histograms of Features")
-fig1, ax1 = plt.subplots(figsize=(6,4))
-sns.histplot(df['sepal length (cm)'], kde=True, ax=ax1)
-sns.histplot(df['sepal width (cm)'], kde=True, ax=ax1)
-
-fig2, ax2 = plt.subplots(figsize=(6,4))
-sns.histplot(df['petal length (cm)'], kde=True, ax=ax2)
-sns.histplot(df['petal width (cm)'], kde=True, ax=ax2)
-
+# User inputs
+st.subheader("Enter Flower Measurements")
 col1, col2 = st.columns(2)
-with col1:
-    st.pyplot(fig1)
-with col2:
-    st.pyplot(fig2)
 
-# --------------------------
-# Decision Tree Visualization
-# --------------------------
-st.subheader("Decision Tree Classifier")
-plt.figure(figsize=(12,8))
-plot_tree(dt_model, feature_names=iris.feature_names, class_names=iris.target_names, filled=True)
-st.pyplot(plt)
+with col1:
+    sepal_length = st.number_input("Sepal Length (cm)", 0.0, 10.0, 5.1)
+    petal_length = st.number_input("Petal Length (cm)", 0.0, 10.0, 1.4)
+
+with col2:
+    sepal_width = st.number_input("Sepal Width (cm)", 0.0, 10.0, 3.5)
+    petal_width = st.number_input("Petal Width (cm)", 0.0, 10.0, 0.2)
+
+# Prediction
+if st.button("🌼 Predict"):
+    features = [[sepal_length, sepal_width, petal_length, petal_width]]
+    prediction = model.predict(features)[0]
+
+    st.subheader("🌟 Prediction Result:")
+    st.success(f"The predicted species is **{prediction.capitalize()}**")
+
+    # Species descriptions & images
+    descriptions = {
+        "setosa": "Iris Setosa is the smallest species, with short petals and sepals.",
+        "versicolor": "Iris Versicolor is medium-sized, often violet-blue in color.",
+        "virginica": "Iris Virginica is the largest, with long petals and sepals."
+    }
+
+    images = {
+        "setosa": "images/setosa.jpg",
+        "versicolor": "images/versicolor.jpg",
+        "virginica": "images/virginica.jpg"
+    }
+
+    st.write(descriptions[prediction])
+
+    img_path = images.get(prediction)
+    if os.path.exists(img_path):
+        st.image(img_path, caption=prediction.capitalize(), use_container_width=True)
+    else:
+        st.warning("Image not found. Please check your `images/` folder.")
+
